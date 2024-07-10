@@ -127,4 +127,75 @@ describe('MessageData', () => {
       expect(retrievedMessage.deleted).toEqual(true);
     });
   });
+
+  //testing to see if the code for adding a tag works
+  describe('addTag', () => {
+    it('successfully adds a message tag', async () => {
+      const conversationId = new ObjectID();
+      const message = await messageData.create(
+        { conversationId, text: 'Message to tag' },
+        senderId,
+      );
+
+      const tagId = new ObjectID();
+      const taggedMessage = await messageData.addTag('test tag', new ObjectID(message.id), senderId, tagId);
+      expect(taggedMessage.tags).toEqual([{ _id: tagId, tag: 'test tag' }]);
+    });
+  });
+
+  //testing removing a tag
+  describe('removeTag', () => {
+    it('successfully removes a message tag', async () => {
+      const conversationId = new ObjectID();
+      const message = await messageData.create(
+        { conversationId, text: 'Message to tag' },
+        senderId,
+      );
+
+      //first add a tag and check it was added correctly
+      const tagId = new ObjectID();
+      const taggedMessage = await messageData.addTag('test tag', new ObjectID(message.id), senderId, tagId);
+      expect(taggedMessage.tags).toEqual([{ _id: tagId, tag: 'test tag' }]);
+      //now delete the tag and check it is now gone
+      const unTaggedMessage = await messageData.removeTag(new ObjectID(message.id), senderId, tagId);
+      expect(unTaggedMessage.hasOwnProperty("tag") == false);
+    });
+  });  
+
+  describe('updateTag', () => {
+    it('successfully updates a tag on a message', async () => {
+      const conversationId = new ObjectID();
+      const message = await messageData.create(
+        { conversationId, text: 'Message with tag to update' },
+        senderId,
+      );
+
+      //first add a tag and check it was added correctly
+      const tagId = new ObjectID();
+      const taggedMessage = await messageData.addTag('test tag', new ObjectID(message.id), senderId, tagId);
+      expect(taggedMessage.tags).toEqual([{ _id: tagId, tag: 'test tag' }]);
+      //Update message tag
+      const updatedMessage = await messageData.updateTag('new tag', new ObjectID(message.id), senderId, tagId);
+      expect(updatedMessage.tags).toEqual([{ _id: tagId, tag: 'new tag' }]);
+    });
+  });
+
+  describe('findTags', () => {
+    it ('successfully finds tags', async () => {
+      const conversationId = new ObjectID();
+      const message = await messageData.create(
+        { conversationId, text: 'Message to find' },
+        senderId,
+      );
+
+      const tagId1 = new ObjectID();
+      const tagId2 = new ObjectID();
+      await messageData.addTag('first test tag', new ObjectID(message.id), senderId, tagId1);
+      await messageData.addTag('second test tag', new ObjectID(message.id), senderId, tagId2);
+
+      const foundMessages = await messageData.getMessagesByTags(['first test tag', 'second second tag']);
+      expect(foundMessages).toHaveLength(1);
+    });
+  });
+
 });

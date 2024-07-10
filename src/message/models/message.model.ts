@@ -116,6 +116,15 @@ export class Reaction {
 }
 
 @Schema()
+@ObjectType()
+export class Tag {
+  id: ObjectID;
+  @Prop({type: String, unique: true})
+  @Field(() => String, {nullable: false})
+  tag: String;
+}
+
+@Schema()
 export class ChatMessageModel {
   id: ObjectID;
 
@@ -153,6 +162,12 @@ export class ChatMessageModel {
     nullable: true,
   })
   reactions?: Reaction[];
+
+  @Prop({
+    type: [{ id: ObjectID, tag: String }],
+    nullable: true,
+  })
+  tags?: Tag[];
 
   /**
    * All the properties below are virtual properties

@@ -260,11 +260,118 @@ export class MessageData {
     return this.getMessage(messageId.toHexString());
   }
 
+  //Allows the sender to add tags to their message
+  async addTag(
+    tag: string,
+    messageId: ObjectID,
+    userId: ObjectID,  
+    tagId : ObjectID = new ObjectID()
+  ): Promise<ChatMessage> {
+    const updatedResult = await this.chatMessageModel.bulkWrite([
+      {
+        updateOne: {
+          filter: {
+            _id: messageId,
+            senderId: userId,
+          },
+          update: {
+            $push: {
+              tags: {
+                _id: tagId,
+                tag: tag,
+              },
+            },
+          },
+        },
+      }
+    ]);
+
+    if (!updatedResult || updatedResult.matchedCount === 0) {
+      throw new Error(
+        `Failed to add tag, messageId: ${messageId.toHexString()}, tag: ${tag}, userId: ${userId.toHexString()}`,
+      );
+    }
+    return this.getMessage(messageId.toHexString());
+  }
+
+
+  async removeTag(
+    messageId: ObjectID,
+    userId: ObjectID,   
+    tagId: ObjectID
+  ): Promise<ChatMessage> {
+    const updatedResult = await this.chatMessageModel.bulkWrite([
+      {
+        updateOne: {
+          filter: {
+            _id: messageId,
+            senderId: userId,
+          },
+          update: {
+            $pull: {
+              tags: {
+                _id: tagId,
+              },
+            },
+          },
+        },
+      }
+    ]);
+
+    if (!updatedResult || updatedResult.matchedCount === 0) {
+      throw new Error(
+        `Failed to delete tag, messageId: ${messageId.toHexString()}, userId: ${userId.toHexString()}`,
+      );
+    }
+    return this.getMessage(messageId.toHexString());
+  }
+
+
+  async updateTag(
+    newTag: string,
+    messageId: ObjectID,
+    userId: ObjectID,   
+    tagId: ObjectID
+  ): Promise<ChatMessage> {
+    const updatedResult = await this.chatMessageModel.bulkWrite([
+      {
+        updateOne: {
+          filter: {
+            _id: messageId,
+            'tags._id': tagId,
+          },
+          update: {
+            $set: {
+              'tags.$.tag': newTag,
+            },
+          },
+        },
+      }
+    ]);
+
+    if (!updatedResult || updatedResult.matchedCount === 0) {
+      throw new Error(
+        `Failed to update tag, messageId: ${messageId.toHexString()}, tag: ${newTag}, userId: ${userId.toHexString()}`,
+      );
+    }
+    return this.getMessage(messageId.toHexString());
+  }
+
+
   async getMessages(ids: ObjectID[]): Promise<ChatMessage[]> {
     const chatMessages = await this.chatMessageModel.find({
       _id: { $in: ids },
     });
     return chatMessages.map((chatMessage) => chatMessageToObject(chatMessage));
+  }
+
+  async getMessagesByTags(
+    tags: string[]
+  ): Promise<ChatMessage[]> {
+    const tagMessages = await this.chatMessageModel.find({
+      tags: { $elemMatch: { tag: {$in: tags} } },
+    });
+    return tagMessages.map((message) => chatMessageToObject(message));
   }
 
   async getMessagesGroupedByConversation(
